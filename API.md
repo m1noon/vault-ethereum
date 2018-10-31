@@ -372,6 +372,7 @@ This endpoint will sign the provided transaction.
 * `gas_limit` (`string: <optional>`) - The gas limit for the transaction. If omitted, we will estimate the gas limit.
 * `nonce` (`string: <optional>`) - The nonce for the transaction. If omitted or zero, we will use the suggested nonce.
 * `data` (`string: <required>`) - Transaction data to sign.
+* `data_encoding` (`string: <optional>`) - Encoding format of data. [utf8(default), hex]
 
 #### Sample Payload
 
@@ -581,6 +582,7 @@ This endpoint will sign the provided data.
 
 * `name` (`string: <required>`) - Specifies the name of the account to use for signing. This is specified as part of the URL.
 * `data` (`string: <required>`) - Some data.
+* `data_encoding` (`string: <optional>`) - Encoding format of data. [utf8(default), hex]
 
 #### Sample Payload
 
@@ -633,6 +635,7 @@ This endpoint will verify that this account signed some data.
 
 * `name` (`string: <required>`) - Specifies the name of the account to use for signing. This is specified as part of the URL.
 * `data` (`string: <required>`) - Some data.
+* `data_encoding` (`string: <optional>`) - Encoding format of data. [utf8(default), hex]
 * `signature` (`string: <required>`) - The signature to verify.
 
 #### Sample Payload
@@ -811,7 +814,8 @@ This endpoint will verify that this account signed some data.
 #### Parameters
 
 * `address` (`string: <required>`) - Specifies the address of the account to use for signing. This is specified as part of the URL.
-* `data` (`string: <required>`) - Some data.
+* `data` (`string: <required>`) - Some data
+* `data_encoding` (`string: <optional>`) - Encoding format of data. [utf8(default), hex]
 * `signature` (`string: <required>`) - The signature to verify.
 
 #### Sample Payload
