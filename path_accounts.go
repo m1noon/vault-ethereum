@@ -19,11 +19,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
-	"math/big"
-	"regexp"
-	"strconv"
-
-	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
@@ -34,11 +30,15 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/shopspring/decimal"
+	"math/big"
+	"regexp"
+	"strconv"
 )
 
 const (
 	// Empty is the empty string
-	Empty string = ""
+	Empty              string = ""
+	ENCODING_TYPE_HEX         = "hex"
 )
 
 // Account is an Ethereum account
@@ -52,6 +52,21 @@ type Account struct {
 	SpendingLimitTx    string   `json:"spending_limit_tx"`
 	SpendingLimitTotal string   `json:"spending_limit_total"`
 	TotalSpend         string   `json:"total_spend"`
+}
+
+type TextEncoding string
+
+func (e TextEncoding) ToBytes(text string) ([]byte, error) {
+	if text == "" {
+		return []byte{}, nil
+	}
+
+	switch e {
+	case ENCODING_TYPE_HEX:
+		return hexutil.Decode(text)
+	default:
+		return []byte(text), nil
+	}
 }
 
 func accountsPaths(b *EthereumBackend) []*framework.Path {
@@ -165,6 +180,10 @@ Send ETH from an account.
 					Type:        framework.TypeString,
 					Description: "The data to sign.",
 				},
+				"data_encoding": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "The encode format of data.[utf-8(default),hex]",
+				},
 				"amount": &framework.FieldSchema{
 					Type:        framework.TypeString,
 					Description: "Amount of ETH (in wei).",
@@ -250,6 +269,10 @@ Sign data using a given Ethereum account.
 				"data": &framework.FieldSchema{
 					Type:        framework.TypeString,
 					Description: "The data to hash (keccak) and sign.",
+				},
+				"data_encoding": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "The encode format of data.[utf-8(default),hex]",
 				},
 			},
 			ExistenceCheck: b.pathExistenceCheck,
@@ -530,6 +553,7 @@ func (b *EthereumBackend) verifySignature(ctx context.Context, req *logical.Requ
 	}
 	signature := data.Get("signature").(string)
 	dataToSign := data.Get("data").(string)
+	dataEncoding := data.Get("data_encoding").(TextEncoding)
 	privateKey, err := crypto.HexToECDSA(account.PrivateKey)
 	if err != nil {
 		return nil, err
@@ -543,7 +567,10 @@ func (b *EthereumBackend) verifySignature(ctx context.Context, req *logical.Requ
 
 	publicKeyBytes := crypto.FromECDSAPub(publicKeyECDSA)
 
-	dataBytes := []byte(dataToSign)
+	dataBytes, err := dataEncoding.ToBytes(dataToSign)
+	if err != nil {
+		return nil, err
+	}
 	signatureBytes, err := hexutil.Decode(signature)
 	if err != nil {
 		return nil, err
@@ -600,6 +627,7 @@ func (b *EthereumBackend) pathSignTx(ctx context.Context, req *logical.Request, 
 
 	name := data.Get("name").(string)
 	dataToSign := data.Get("data").(string)
+	dataEncoding := data.Get("data_encoding").(TextEncoding)
 	account, err := b.readAccount(ctx, req, name)
 	if err != nil {
 		return nil, fmt.Errorf("error reading account")
@@ -665,8 +693,12 @@ func (b *EthereumBackend) pathSignTx(ctx context.Context, req *logical.Request, 
 		}
 	}
 
+	dataBytes, err := dataEncoding.ToBytes(dataToSign)
+	if err != nil {
+		return nil, err
+	}
 	toAddress := common.HexToAddress(data.Get("address_to").(string))
-	tx := types.NewTransaction(nonce, toAddress, amount, gasLimit, gasPrice, []byte(dataToSign))
+	tx := types.NewTransaction(nonce, toAddress, amount, gasLimit, gasPrice, dataBytes)
 	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainID), privateKey)
 	if err != nil {
 		return nil, err
@@ -824,6 +856,7 @@ func (b *EthereumBackend) pathSign(ctx context.Context, req *logical.Request, da
 
 	name := data.Get("name").(string)
 	dataToSign := data.Get("data").(string)
+	dataEncoding := data.Get("data_encoding").(TextEncoding)
 	account, err := b.readAccount(ctx, req, name)
 	if err != nil {
 		return nil, fmt.Errorf("error reading account")
@@ -837,7 +870,10 @@ func (b *EthereumBackend) pathSign(ctx context.Context, req *logical.Request, da
 		return nil, err
 	}
 	defer ZeroKey(privateKey)
-	dataBytes := []byte(dataToSign)
+	dataBytes, err := dataEncoding.ToBytes(dataToSign)
+	if err != nil {
+		return nil, err
+	}
 	hash := crypto.Keccak256Hash(dataBytes)
 
 	signature, err := crypto.Sign(hash.Bytes(), privateKey)

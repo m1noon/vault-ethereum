@@ -83,6 +83,10 @@ func addressesPaths(b *EthereumBackend) []*framework.Path {
 					Type:        framework.TypeString,
 					Description: "The data to verify the signature of.",
 				},
+				"data_encoding": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "The encode format of data.[utf-8(default),hex]",
+				},
 				"signature": &framework.FieldSchema{
 					Type:        framework.TypeString,
 					Description: "The signature to verify.",
