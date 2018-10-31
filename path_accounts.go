@@ -37,8 +37,8 @@ import (
 
 const (
 	// Empty is the empty string
-	Empty              string = ""
-	ENCODING_TYPE_HEX         = "hex"
+	Empty             string = ""
+	ENCODING_TYPE_HEX        = "hex"
 )
 
 // Account is an Ethereum account
@@ -553,7 +553,7 @@ func (b *EthereumBackend) verifySignature(ctx context.Context, req *logical.Requ
 	}
 	signature := data.Get("signature").(string)
 	dataToSign := data.Get("data").(string)
-	dataEncoding := data.Get("data_encoding").(TextEncoding)
+	dataEncoding := TextEncoding(data.Get("data_encoding").(string))
 	privateKey, err := crypto.HexToECDSA(account.PrivateKey)
 	if err != nil {
 		return nil, err
@@ -627,7 +627,7 @@ func (b *EthereumBackend) pathSignTx(ctx context.Context, req *logical.Request, 
 
 	name := data.Get("name").(string)
 	dataToSign := data.Get("data").(string)
-	dataEncoding := data.Get("data_encoding").(TextEncoding)
+	dataEncoding := TextEncoding(data.Get("data_encoding").(string))
 	account, err := b.readAccount(ctx, req, name)
 	if err != nil {
 		return nil, fmt.Errorf("error reading account")
@@ -856,7 +856,7 @@ func (b *EthereumBackend) pathSign(ctx context.Context, req *logical.Request, da
 
 	name := data.Get("name").(string)
 	dataToSign := data.Get("data").(string)
-	dataEncoding := data.Get("data_encoding").(TextEncoding)
+	dataEncoding := TextEncoding(data.Get("data_encoding").(string))
 	account, err := b.readAccount(ctx, req, name)
 	if err != nil {
 		return nil, fmt.Errorf("error reading account")
